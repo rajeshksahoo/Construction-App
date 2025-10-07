@@ -9,7 +9,7 @@ interface AttendanceTrackerProps {
   userRole: 'admin' | 'viewer';
   onMarkAttendance: (employeeId: string, date: string, present: boolean) => void;
   onMarkLate: (employeeId: string, date: string) => void;
-  onMarkCustom: (employeeId: string, date: string, type: 'ot' | 'half-day' | 'custom', amount?: number) => void;
+  onMarkCustom: (employeeId: string, date: string, type: 'ot' | 'half-day' | 'custom', amount?: number, otHours?: number, otRate?: number) => void;
 }
 
 const AttendanceTracker: React.FC<AttendanceTrackerProps> = ({
@@ -23,6 +23,8 @@ const AttendanceTracker: React.FC<AttendanceTrackerProps> = ({
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [customAmount, setCustomAmount] = useState<{ [key: string]: string }>({});
   const [showCustomInput, setShowCustomInput] = useState<{ [key: string]: boolean }>({});
+  const [otHours, setOtHours] = useState<{ [key: string]: string }>({});
+  const [showOtInput, setShowOtInput] = useState<{ [key: string]: boolean }>({});
   const currentWeek = getCurrentWeek();
 
   const getAttendanceForDate = (employeeId: string, date: string) => {
@@ -46,10 +48,8 @@ const AttendanceTracker: React.FC<AttendanceTrackerProps> = ({
   const today = new Date().toISOString().split('T')[0];
 
   const isDateDisabled = (date: string) => {
-    const targetDate = new Date(date);
-    const currentDate = new Date();
-    currentDate.setHours(23, 59, 59, 999);
-    return targetDate > currentDate;
+    // Only allow today's date
+    return date !== today;
   };
 
   const calculateEmployeeBalance = (employeeId: string) => {
@@ -119,6 +119,17 @@ const AttendanceTracker: React.FC<AttendanceTrackerProps> = ({
     }
   };
 
+  const handleOtPayment = (employeeId: string, date: string) => {
+    const hours = parseFloat(otHours[employeeId] || '0');
+    const employee = employees.find(e => e.id === employeeId);
+    if (hours > 0 && employee) {
+      const otRate = employee.dailyWage / 8; // Assuming 8 hours per day
+      const otAmount = hours * otRate * 1.5; // 1.5x rate for overtime
+      onMarkCustom(employeeId, date, 'ot', otAmount, hours, otRate);
+      setOtHours(prev => ({ ...prev, [employeeId]: '' }));
+      setShowOtInput(prev => ({ ...prev, [employeeId]: false }));
+    }
+  };
   const getAttendanceStatus = (record: AttendanceRecord | undefined) => {
     if (!record) return 'not-marked';
     if (record.present && record.customType === 'ot') return 'ot';
@@ -212,7 +223,7 @@ const AttendanceTracker: React.FC<AttendanceTrackerProps> = ({
                             {(status === 'present' || status === 'not-marked') && (
                               <div className="grid grid-cols-3 gap-2">
                                 <button
-                                  onClick={() => onMarkCustom(employee.id, today, 'ot')}
+                                  onClick={() => setShowOtInput(prev => ({ ...prev, [employee.id]: true }))}
                                   className="p-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors duration-200 flex items-center justify-center gap-1"
                                   title="Overtime"
                                 >
@@ -235,6 +246,40 @@ const AttendanceTracker: React.FC<AttendanceTrackerProps> = ({
                                   <DollarSign className="h-4 w-4" />
                                   <span className="text-xs">Custom</span>
                                 </button>
+                              </div>
+                            )}
+                            
+                            {/* OT Hours Input */}
+                            {showOtInput[employee.id] && (
+                              <div className="space-y-2">
+                                <div className="flex gap-2">
+                                  <input
+                                    type="number"
+                                    value={otHours[employee.id] || ''}
+                                    onChange={(e) => setOtHours(prev => ({ ...prev, [employee.id]: e.target.value }))}
+                                    placeholder="OT Hours"
+                                    className="flex-1 p-2 border border-gray-300 rounded-lg text-sm"
+                                    step="0.5"
+                                    min="0"
+                                  />
+                                  <button
+                                    onClick={() => handleOtPayment(employee.id, today)}
+                                    className="p-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors duration-200"
+                                  >
+                                    <Check className="h-4 w-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => setShowOtInput(prev => ({ ...prev, [employee.id]: false }))}
+                                    className="p-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors duration-200"
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </button>
+                                </div>
+                                {otHours[employee.id] && (
+                                  <div className="text-xs text-blue-600 text-center">
+                                    OT Amount: ₹{((parseFloat(otHours[employee.id]) || 0) * (employee.dailyWage / 8) * 1.5).toFixed(2)}
+                                  </div>
+                                )}
                               </div>
                             )}
                             
@@ -470,7 +515,9 @@ const AttendanceTracker: React.FC<AttendanceTrackerProps> = ({
                                   <div className="w-6 h-6 bg-gray-300 rounded-full"></div>
                                 )}
                                 {isDisabled && userRole === 'admin' && (
-                                  <div className="text-xs text-gray-400">Future</div>
+                                  <div className="text-xs text-gray-400">
+                                    {date > today ? 'Future' : 'Past'}
+                                  </div>
                                 )}
                               </div>
                             )}

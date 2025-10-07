@@ -25,14 +25,64 @@ const Dashboard: React.FC<DashboardProps> = ({ employees, attendance, advances }
     a.present && a.date === new Date().toISOString().split('T')[0]
   ).length;
   
-  const totalCurrentWeekWages = currentWeekAttendance
-    .filter(a => a.present)
-    .reduce((sum, a) => {
-      const employee = employees.find(e => e.id === a.employeeId);
-      return sum + (employee?.dailyWage || 0);
-    }, 0);
+  // Updated calculation to include OT and custom amounts
+  const totalCurrentWeekWages = currentWeekAttendance.reduce((sum, record) => {
+    const employee = employees.find(e => e.id === record.employeeId);
+    let earnings = 0;
+    
+    if (record.present) {
+      // Base daily wage
+      earnings += employee?.dailyWage || 0;
+    }
+    
+    // Add custom amount (for OT, half-day, or custom payments)
+    if (record.customAmount) {
+      earnings += record.customAmount;
+    }
+    
+    return sum + earnings;
+  }, 0);
   
   const totalCurrentWeekAdvances = currentWeekAdvances.reduce((sum, a) => sum + a.amount, 0);
+
+  // Helper function to calculate total earnings for an employee including OT and custom amounts
+  const calculateEmployeeWeekEarnings = (employeeId: string) => {
+    const weekRecords = currentWeekAttendance.filter(a => a.employeeId === employeeId);
+    
+    return weekRecords.reduce((total, record) => {
+      const employee = employees.find(e => e.id === employeeId);
+      let earnings = 0;
+      
+      if (record.present) {
+        // Base daily wage
+        earnings += employee?.dailyWage || 0;
+      }
+      
+      // Add custom amount (for OT, half-day, or custom payments)
+      if (record.customAmount) {
+        earnings += record.customAmount;
+      }
+      
+      return total + earnings;
+    }, 0);
+  };
+
+  // Helper function to get employee attendance details
+  const getEmployeeAttendanceDetails = (employeeId: string) => {
+    const weekRecords = currentWeekAttendance.filter(a => a.employeeId === employeeId);
+    
+    const presentDays = weekRecords.filter(record => record.present).length;
+    const otDays = weekRecords.filter(record => record.customType === 'ot').length;
+    const halfDays = weekRecords.filter(record => record.customType === 'half-day').length;
+    const customPayments = weekRecords.filter(record => record.customType === 'custom').length;
+    
+    return {
+      presentDays,
+      otDays,
+      halfDays,
+      customPayments
+    };
+  };
 
   const stats = [
     {
@@ -124,10 +174,10 @@ const Dashboard: React.FC<DashboardProps> = ({ employees, attendance, advances }
             <div className="p-6 max-h-[60vh] overflow-y-auto">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {employees.map((employee) => {
-                  const employeeAttendance = currentWeekAttendance.filter(a => 
-                    a.employeeId === employee.id && a.present
-                  ).length;
-                  const weekEarnings = employeeAttendance * employee.dailyWage;
+                  const weekEarnings = calculateEmployeeWeekEarnings(employee.id);
+                  const attendanceDetails = getEmployeeAttendanceDetails(employee.id);
+                  const baseEarnings = attendanceDetails.presentDays * employee.dailyWage;
+                  const additionalEarnings = weekEarnings - baseEarnings;
                   
                   return (
                     <div key={employee.id} className="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors">
@@ -143,18 +193,44 @@ const Dashboard: React.FC<DashboardProps> = ({ employees, attendance, advances }
                         </div>
                       </div>
                       
-                      <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className="grid grid-cols-2 gap-2 text-sm mb-2">
                         <div>
                           <p className="text-gray-500">Daily Wage</p>
                           <p className="font-medium">{formatCurrency(employee.dailyWage)}</p>
                         </div>
                         <div>
-                          <p className="text-gray-500">This Week</p>
-                          <p className="font-medium">{employeeAttendance} days</p>
+                          <p className="text-gray-500">Days Worked</p>
+                          <p className="font-medium">{attendanceDetails.presentDays}/7</p>
                         </div>
-                        <div className="col-span-2">
-                          <p className="text-gray-500">Week Earnings</p>
-                          <p className="font-semibold text-green-600">{formatCurrency(weekEarnings)}</p>
+                      </div>
+
+                      {/* Additional earnings breakdown */}
+                      {(attendanceDetails.otDays > 0 || attendanceDetails.halfDays > 0 || attendanceDetails.customPayments > 0) && (
+                        <div className="mb-2 p-2 bg-blue-50 rounded text-xs">
+                          <p className="font-medium text-blue-800 mb-1">Additional Earnings:</p>
+                          {attendanceDetails.otDays > 0 && (
+                            <p className="text-blue-700">OT Days: {attendanceDetails.otDays}</p>
+                          )}
+                          {attendanceDetails.halfDays > 0 && (
+                            <p className="text-orange-600">Half Days: {attendanceDetails.halfDays}</p>
+                          )}
+                          {attendanceDetails.customPayments > 0 && (
+                            <p className="text-purple-600">Custom Payments: {attendanceDetails.customPayments}</p>
+                          )}
+                        </div>
+                      )}
+                      
+                      <div className="border-t pt-2">
+                        <div className="flex justify-between items-center">
+                          <p className="text-gray-500 text-sm">Week Earnings</p>
+                          <div className="text-right">
+                            <p className="font-semibold text-green-600">{formatCurrency(weekEarnings)}</p>
+                            {additionalEarnings > 0 && (
+                              <p className="text-xs text-blue-600">
+                                +{formatCurrency(additionalEarnings)} extra
+                              </p>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -205,29 +281,40 @@ const Dashboard: React.FC<DashboardProps> = ({ employees, attendance, advances }
           </div>
         </div>
 
-        {/* Top Earners This Week */}
+        {/* Top Earners This Week - Updated to include OT and custom amounts */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Top Earners This Week</h3>
           <div className="space-y-3">
             {employees
               .map((employee) => {
-                const weekAttendance = currentWeekAttendance.filter(a => 
-                  a.employeeId === employee.id && a.present
-                ).length;
-                const weekEarnings = weekAttendance * employee.dailyWage;
-                return { employee, weekEarnings, weekAttendance };
+                const weekEarnings = calculateEmployeeWeekEarnings(employee.id);
+                const attendanceDetails = getEmployeeAttendanceDetails(employee.id);
+                const baseEarnings = attendanceDetails.presentDays * employee.dailyWage;
+                const additionalEarnings = weekEarnings - baseEarnings;
+                
+                return { 
+                  employee, 
+                  weekEarnings, 
+                  presentDays: attendanceDetails.presentDays,
+                  additionalEarnings
+                };
               })
               .sort((a, b) => b.weekEarnings - a.weekEarnings)
               .slice(0, 5)
-              .map(({ employee, weekEarnings, weekAttendance }) => (
+              .map(({ employee, weekEarnings, presentDays, additionalEarnings }) => (
                 <div key={employee.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div>
+                  <div className="flex-1">
                     <p className="font-medium text-gray-900">{employee.name}</p>
                     <p className="text-sm text-gray-600">{employee.designation}</p>
+                    {additionalEarnings > 0 && (
+                      <p className="text-xs text-blue-600 mt-1">
+                        Includes {formatCurrency(additionalEarnings)} extra
+                      </p>
+                    )}
                   </div>
                   <div className="text-right">
                     <p className="font-semibold text-green-600">{formatCurrency(weekEarnings)}</p>
-                    <p className="text-xs text-gray-500">{weekAttendance} days</p>
+                    <p className="text-xs text-gray-500">{presentDays} days</p>
                   </div>
                 </div>
               ))}

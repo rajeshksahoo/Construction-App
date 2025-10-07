@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Employee, AttendanceRecord, Advance, Vehicle, FuelRecord } from './types';
 import { useLocalStorage } from './hooks/useLocalStorage';
+import { Employee, AttendanceRecord, Advance, Vehicle, FuelRecord } from './types';
+import { useFirestore } from './hooks/useFirestore';
 import { getCurrentWeek } from './utils/dateUtils';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
@@ -21,16 +22,22 @@ import {
   Menu, 
   X,
   Building2,
-  LogOut
+  LogOut,
+  Phone,
+  Mail,
+  MapPin
 } from 'lucide-react';
 
 function App() {
   const [user, setUser] = useLocalStorage<{ role: 'admin' | 'viewer' } | null>('khata-user', null);
-  const [employees, setEmployees] = useLocalStorage<Employee[]>('khata-employees', []);
-  const [attendance, setAttendance] = useLocalStorage<AttendanceRecord[]>('khata-attendance', []);
-  const [advances, setAdvances] = useLocalStorage<Advance[]>('khata-advances', []);
-  const [vehicles, setVehicles] = useLocalStorage<Vehicle[]>('khata-vehicles', []);
-  const [fuelRecords, setFuelRecords] = useLocalStorage<FuelRecord[]>('khata-fuel-records', []);
+  
+  // Firebase hooks
+  const { data: employees, loading: employeesLoading, addItem: addEmployee, deleteItem: deleteEmployee } = useFirestore<Employee>('employees');
+  const { data: attendance, loading: attendanceLoading, addItem: addAttendanceRecord, updateItem: updateAttendanceRecord } = useFirestore<AttendanceRecord>('attendance');
+  const { data: advances, loading: advancesLoading, addItem: addAdvanceRecord, deleteItem: deleteAdvance } = useFirestore<Advance>('advances');
+  const { data: vehicles, loading: vehiclesLoading, addItem: addVehicle } = useFirestore<Vehicle>('vehicles');
+  const { data: fuelRecords, loading: fuelRecordsLoading, addItem: addFuelRecord, deleteItem: deleteFuelRecord } = useFirestore<FuelRecord>('fuelRecords');
+  
   const [activeTab, setActiveTab] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -42,14 +49,19 @@ function App() {
     setUser(null);
   };
 
+  // Your existing handler functions remain the same...
   const handleAddEmployee = (employeeData: Omit<Employee, 'id' | 'createdAt'>) => {
     if (user?.role !== 'admin') return;
-    const newEmployee: Employee = {
+    const newEmployee: Omit<Employee, 'id'> = {
       ...employeeData,
-      id: Date.now().toString(),
       createdAt: new Date().toISOString(),
     };
-    setEmployees([...employees, newEmployee]);
+    return addEmployee(newEmployee);
+  };
+
+  const handleDeleteEmployee = (employeeId: string) => {
+    if (user?.role !== 'admin') return;
+    deleteEmployee(employeeId);
   };
 
   const handleMarkAttendance = (employeeId: string, date: string, present: boolean) => {
@@ -59,54 +71,47 @@ function App() {
       a => a.employeeId === employeeId && a.date === date
     );
 
-    if (existingRecord) {
-      setAttendance(
-        attendance.map(a =>
-          a.id === existingRecord.id ? { ...a, present, late: false } : a
-        )
-      );
+    if (existingRecord && existingRecord.id) {
+      updateAttendanceRecord(existingRecord.id, { present, late: false });
     } else {
-      const newRecord: AttendanceRecord = {
-        id: Date.now().toString(),
+      const newRecord: Omit<AttendanceRecord, 'id'> = {
         employeeId,
         date,
         present,
         late: false,
         weekStart,
       };
-      setAttendance([...attendance, newRecord]);
+      addAttendanceRecord(newRecord);
     }
   };
 
   const handleMarkLate = (employeeId: string, date: string) => {
     if (user?.role !== 'admin') return;
-    setAttendance(
-      attendance.map(a =>
-        a.employeeId === employeeId && a.date === date
-          ? { ...a, present: true, late: true }
-          : a
-      )
+    const existingRecord = attendance.find(
+      a => a.employeeId === employeeId && a.date === date
     );
+    
+    if (existingRecord && existingRecord.id) {
+      updateAttendanceRecord(existingRecord.id, { present: true, late: true });
+    }
   };
 
-  const handleMarkCustom = (employeeId: string, date: string, customType: string, customAmount?: number) => {
+  const handleMarkCustom = (employeeId: string, date: string, customType: "ot" | "half-day" | "custom", customAmount?: number) => {
     if (user?.role !== 'admin') return;
     const weekStart = getCurrentWeek();
     const existingRecord = attendance.find(
       a => a.employeeId === employeeId && a.date === date
     );
 
-    if (existingRecord) {
-      setAttendance(
-        attendance.map(a =>
-          a.id === existingRecord.id 
-            ? { ...a, present: true, late: false, customType, customAmount }
-            : a
-        )
-      );
+    if (existingRecord && existingRecord.id) {
+      updateAttendanceRecord(existingRecord.id, { 
+        present: true, 
+        late: false, 
+        customType, 
+        customAmount 
+      });
     } else {
-      const newRecord: AttendanceRecord = {
-        id: Date.now().toString(),
+      const newRecord: Omit<AttendanceRecord, 'id'> = {
         employeeId,
         date,
         present: true,
@@ -115,47 +120,41 @@ function App() {
         customType,
         customAmount,
       };
-      setAttendance([...attendance, newRecord]);
+      addAttendanceRecord(newRecord);
     }
   };
 
   const handleAddAdvance = (advanceData: Omit<Advance, 'id'>) => {
     if (user?.role !== 'admin') return;
-    const newAdvance: Advance = {
-      ...advanceData,
-      id: Date.now().toString(),
-    };
-    setAdvances([...advances, newAdvance]);
+    addAdvanceRecord(advanceData);
   };
 
   const handleDeleteAdvance = (advanceId: string) => {
     if (user?.role !== 'admin') return;
-    setAdvances(advances.filter(a => a.id !== advanceId));
+    deleteAdvance(advanceId);
   };
 
   const handleAddVehicle = (vehicleData: Omit<Vehicle, 'id' | 'createdAt'>) => {
     if (user?.role !== 'admin') return;
-    const newVehicle: Vehicle = {
+    const newVehicle: Omit<Vehicle, 'id'> = {
       ...vehicleData,
-      id: Date.now().toString(),
       createdAt: new Date().toISOString(),
     };
-    setVehicles([...vehicles, newVehicle]);
+    addVehicle(newVehicle);
   };
 
   const handleAddFuelRecord = (fuelData: Omit<FuelRecord, 'id' | 'createdAt'>) => {
     if (user?.role !== 'admin') return;
-    const newFuelRecord: FuelRecord = {
+    const newFuel: Omit<FuelRecord, 'id'> = {
       ...fuelData,
-      id: Date.now().toString(),
       createdAt: new Date().toISOString(),
     };
-    setFuelRecords([...fuelRecords, newFuelRecord]);
+    addFuelRecord(newFuel);
   };
 
   const handleDeleteFuelRecord = (fuelRecordId: string) => {
     if (user?.role !== 'admin') return;
-    setFuelRecords(fuelRecords.filter(f => f.id !== fuelRecordId));
+    deleteFuelRecord(fuelRecordId);
   };
 
   const navItems = [
@@ -167,6 +166,107 @@ function App() {
     { id: 'reports', label: 'Reports', icon: FileText },
     { id: 'vehicles', label: 'Vehicles', icon: Truck },
   ];
+
+  // Header Component
+  const Header = () => (
+    <header className="bg-white shadow-sm border-b border-gray-200">
+      <div className="px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 capitalize">
+              {activeTab === 'dashboard' ? 'Overview' : 
+               activeTab === 'employees' ? 'Employee Management' :
+               activeTab === 'attendance' ? 'Attendance Tracking' :
+               activeTab === 'advances' ? 'Advance Management' :
+               activeTab === 'payments' ? 'Payment Processing' :
+               activeTab === 'reports' ? 'Reports & Analytics' :
+               activeTab === 'vehicles' ? 'Vehicle Management' : 'Dashboard'}
+            </h1>
+            <p className="text-gray-600 text-sm mt-1">
+              {user?.role === 'admin' ? 'Administrator Panel' : 'Viewer Mode'} • {new Date().toLocaleDateString('en-IN', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              })}
+            </p>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="text-right">
+              <p className="text-sm text-gray-600">Total Employees</p>
+              <p className="text-lg font-semibold text-gray-900">{employees.length}</p>
+            </div>
+            <div className="w-px h-8 bg-gray-300"></div>
+            <div className="text-right">
+              <p className="text-sm text-gray-600">Active This Week</p>
+              <p className="text-lg font-semibold text-green-600">
+                {attendance.filter(a => a.present).length}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+
+  // Footer Component
+  const Footer = () => (
+    <footer className="bg-gray-800 text-white mt-auto">
+      <div className="px-6 py-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div>
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <Building2 className="h-5 w-5" />
+              JJ Construction
+            </h3>
+            <p className="text-gray-300 text-sm">
+              Comprehensive construction management system for efficient workforce, 
+              vehicle, and financial management.
+            </p>
+          </div>
+          
+          <div>
+            <h4 className="font-semibold mb-4">Contact Information</h4>
+            <div className="space-y-2 text-sm text-gray-300">
+              <div className="flex items-center gap-2">
+                <Mail className="h-4 w-4" />
+                <span>jaganbehera63@gmail.com</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <MapPin className="h-4 w-4 mt-0.5" />
+                <span>Patia, Bhubaneswar, Odisha - 751024</span>
+              </div>
+            </div>
+          </div>
+          
+          <div>
+            <h4 className="font-semibold mb-4">Quick Stats</h4>
+            <div className="space-y-2 text-sm text-gray-300">
+              <div className="flex justify-between">
+                <span>Total Workers:</span>
+                <span className="font-medium">{employees.length}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Vehicles:</span>
+                <span className="font-medium">{vehicles.length}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Active Session:</span>
+                <span className="font-medium capitalize">{user?.role}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="border-t border-gray-700 mt-6 pt-6 text-center">
+          <p className="text-gray-400 text-sm">
+            © {new Date().getFullYear()} JJ Construction. All rights reserved. | 
+            Built with React & Firebase
+          </p>
+        </div>
+      </div>
+    </footer>
+  );
 
   const renderContent = () => {
     switch (activeTab) {
@@ -186,6 +286,7 @@ function App() {
             advances={advances}
             userRole={user?.role || 'viewer'}
             onAddEmployee={handleAddEmployee}
+            onDeleteEmployee={handleDeleteEmployee}
           />
         );
       case 'attendance':
@@ -247,6 +348,18 @@ function App() {
     return <Login onLogin={handleLogin} />;
   }
 
+  // Show loading state while data is being fetched
+  if (employeesLoading || attendanceLoading || advancesLoading || vehiclesLoading || fuelRecordsLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading data...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 flex">
       {/* Mobile Sidebar Overlay */}
@@ -257,7 +370,7 @@ function App() {
         />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar - remains the same */}
       <div className={`fixed left-0 top-0 h-full bg-white shadow-xl border-r border-gray-200 z-50 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       } w-64`}>
@@ -267,7 +380,7 @@ function App() {
               <Building2 className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900">Pramod Construction & Engineering</h1>
+              <h1 className="text-xl font-bold text-gray-900">JJ Construction</h1>
               <p className="text-xs text-gray-600">
                 {user.role === 'admin' ? 'Admin Panel' : 'Viewer Mode'}
               </p>
@@ -347,7 +460,7 @@ function App() {
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* Main Content Area with Header and Footer */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Mobile Header */}
         <div className="lg:hidden bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
@@ -366,7 +479,7 @@ function App() {
               {user.role === 'admin' ? 'Admin' : 'Viewer'}
             </span>
           </div>
-          <h1 className="text-lg font-semibold text-gray-900">Pramod Construction & Engineering</h1>
+          <h1 className="text-lg font-semibold text-gray-900">JJ Construction</h1>
           <button
             onClick={handleLogout}
             className="text-gray-600 hover:text-gray-900 transition-colors duration-200"
@@ -376,10 +489,18 @@ function App() {
           </button>
         </div>
 
+        {/* Desktop Header */}
+        <div className="hidden lg:block">
+          <Header />
+        </div>
+
         {/* Content Area */}
-        <main className="flex-1 p-4 lg:p-8 overflow-auto">
+        <main className="flex-1 p-4 lg:p-6 overflow-auto bg-gray-50">
           {renderContent()}
         </main>
+
+        {/* Footer */}
+        <Footer />
       </div>
     </div>
   );
