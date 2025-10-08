@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Employee, AttendanceRecord, Advance } from '../types';
 import { formatCurrency, getCurrentWeek, getWeekStart } from '../utils/dateUtils';
 import { Plus, CreditCard as Edit2, Phone, Calendar, IndianRupee, User, X, Trash2 } from 'lucide-react';
-
+ 
 interface EmployeeManagementProps {
   employees: Employee[];
   attendance: AttendanceRecord[];
@@ -11,7 +11,7 @@ interface EmployeeManagementProps {
   onAddEmployee: (employee: Omit<Employee, 'id' | 'createdAt'>) => void;
   onDeleteEmployee: (employeeId: string) => void;
 }
-
+ 
 const EmployeeManagement: React.FC<EmployeeManagementProps> = ({
   employees,
   attendance,
@@ -29,7 +29,7 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({
     contactNumber: '',
     dailyWage: 500,
   });
-
+ 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -38,7 +38,7 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({
         alert('Photo size should be less than 500KB. Please choose a smaller image.');
         return;
       }
-      
+     
       const reader = new FileReader();
       reader.onload = (event) => {
         const result = event.target?.result as string;
@@ -47,22 +47,23 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({
       reader.readAsDataURL(file);
     }
   };
-
+ 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    console.log('Form submitted with data:', formData);
-    console.log('Photo preview:', photoPreview ? 'Photo selected' : 'No photo');
-    
+   
+    // Validation
+    if (!formData.name.trim() || !formData.designation.trim() || !formData.contactNumber.trim()) {
+      alert('Please fill in all required fields');
+      return;
+    }
+ 
     try {
-      console.log('Adding employee with data:', { ...formData, photo: photoPreview });
       await onAddEmployee({
         ...formData,
-        photo: photoPreview
+        photo: photoPreview,
+        createdAt: new Date().toISOString() // This is the key fix
       });
-      
-      console.log('Employee added successfully');
-      
+     
       // Reset form
       setFormData({ name: '', designation: '', contactNumber: '', dailyWage: 500 });
       setPhotoPreview('');
@@ -72,13 +73,13 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({
       alert('Error adding employee. Please try again.');
     }
   };
-
+ 
   // Simple function to get daily wage for an employee
   const getEmployeeDailyWage = (employeeId: string) => {
     const employee = employees.find(e => e.id === employeeId);
     return employee?.dailyWage || 0;
   };
-
+ 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -93,7 +94,7 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({
           </button>
         )}
       </div>
-
+ 
       {/* Add Employee Form */}
       {showAddForm && userRole === 'admin' && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center overflow-auto p-4 z-50">
@@ -113,7 +114,7 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({
                   placeholder="Enter employee name"
                 />
               </div>
-              
+             
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Designation
@@ -127,7 +128,7 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({
                   placeholder="e.g., Mason, Helper, Electrician"
                 />
               </div>
-              
+             
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Contact Number
@@ -141,7 +142,7 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({
                   placeholder="Enter 10-digit mobile number"
                 />
               </div>
-              
+             
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Daily Wage (₹)
@@ -155,7 +156,7 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
-              
+             
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Employee Photo (Optional - Max 500KB)
@@ -177,7 +178,7 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({
                   </div>
                 )}
               </div>
-              
+             
               <div className="flex gap-3 pt-4">
                 <button
                   type="submit"
@@ -197,21 +198,21 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({
           </div>
         </div>
       )}
-
+ 
       {/* Employee Details Modal */}
       {selectedEmployee && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-gray-900">Employee Details</h2>
-              <button 
+              <button
                 onClick={() => setSelectedEmployee(null)}
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
-            
+ 
             <div className="text-center mb-6">
               {selectedEmployee.photo ? (
                 <img
@@ -227,7 +228,7 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({
               <h3 className="text-xl font-bold text-gray-900">{selectedEmployee.name}</h3>
               <p className="text-gray-600">{selectedEmployee.designation}</p>
             </div>
-            
+           
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span className="text-gray-600">Contact:</span>
@@ -240,11 +241,14 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({
               <div className="flex justify-between">
                 <span className="text-gray-600">Joined:</span>
                 <span className="font-medium">
-                  {new Date(selectedEmployee.createdAt).toLocaleDateString('en-IN')}
+                  {selectedEmployee.createdAt ?
+                    new Date(selectedEmployee.createdAt).toLocaleDateString('en-IN') :
+                    'Date not available'
+                  }
                 </span>
               </div>
             </div>
-            
+               
             {userRole === 'admin' && (
               <div className="mt-6 pt-4 border-t border-gray-200">
                 <button
@@ -264,12 +268,12 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({
           </div>
         </div>
       )}
-
+ 
       {/* Employee List */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {employees.map((employee) => {
           const dailyWage = getEmployeeDailyWage(employee.id);
-          
+         
           return (
             <div
               key={employee.id}
@@ -292,7 +296,7 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({
                 </div>
                 <h3 className="font-semibold text-gray-900 text-center">{employee.name}</h3>
                 <p className="text-sm text-gray-600 text-center mb-3">{employee.designation}</p>
-                
+               
                 <div className="text-center">
                   <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
                     {formatCurrency(dailyWage)}/day
@@ -302,7 +306,7 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({
             </div>
           );
         })}
-        
+       
         {employees.length === 0 && (
           <div className="col-span-full text-center py-12">
             <User className="h-12 w-12 text-gray-300 mx-auto mb-4" />
@@ -322,5 +326,5 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({
     </div>
   );
 };
-
+ 
 export default EmployeeManagement;
