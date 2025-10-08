@@ -217,7 +217,7 @@ function App() {
           <div>
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <Building2 className="h-5 w-5" />
-              JJ Construction
+              Promod Construction and Engineering
             </h3>
             <p className="text-gray-300 text-sm">
               Comprehensive construction management system for efficient workforce, 
@@ -230,7 +230,7 @@ function App() {
             <div className="space-y-2 text-sm text-gray-300">
               <div className="flex items-center gap-2">
                 <Mail className="h-4 w-4" />
-                <span>jaganbehera63@gmail.com</span>
+                <span>pramodpradhan@gmail.com</span>
               </div>
               <div className="flex items-start gap-2">
                 <MapPin className="h-4 w-4 mt-0.5" />
@@ -260,8 +260,8 @@ function App() {
         
         <div className="border-t border-gray-700 mt-6 pt-6 text-center">
           <p className="text-gray-400 text-sm">
-            © {new Date().getFullYear()} JJ Construction. All rights reserved. | 
-            Built with React & Firebase
+            © {new Date().getFullYear()} Rajesh Kuamr Sahoo All rights reserved. | 
+            Made with ❤️ in India
           </p>
         </div>
       </div>
@@ -380,7 +380,7 @@ function App() {
               <Building2 className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900">JJ Construction</h1>
+              <h1 className="text-xl font-bold text-gray-900">Promod Construction and Engineering</h1>
               <p className="text-xs text-gray-600">
                 {user.role === 'admin' ? 'Admin Panel' : 'Viewer Mode'}
               </p>
@@ -479,7 +479,7 @@ function App() {
               {user.role === 'admin' ? 'Admin' : 'Viewer'}
             </span>
           </div>
-          <h1 className="text-lg font-semibold text-gray-900">JJ Construction</h1>
+          <h1 className="text-lg font-semibold text-gray-900">Promod Construction and Engineering</h1>
           <button
             onClick={handleLogout}
             className="text-gray-600 hover:text-gray-900 transition-colors duration-200"

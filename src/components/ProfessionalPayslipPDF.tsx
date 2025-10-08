@@ -274,11 +274,11 @@ const ProfessionalPayslipPDF: React.FC<ProfessionalPayslipPDFProps> = ({ employe
         <View style={styles.header}>
           <View style={styles.companyInfo}>
             <View style={styles.companyLogo}>
-              <Text style={{ color: 'white', fontSize: 16, fontWeight: 'bold' }}>JC</Text>
+              <Text style={{ color: 'white', fontSize: 16, fontWeight: 'bold' }}>PCE</Text>
             </View>
             <View style={styles.companyText}>
-              <Text style={styles.companyName}>JJ CONSTRUCTION</Text>
-              <Text style={styles.companyAddress}>Construction Site Office, Main Road, City, State</Text>
+              <Text style={styles.companyName}>Promod Construction and Engineering</Text>
+              <Text style={styles.companyAddress}>Construction Site Office,Near Patia college, Patia, Bhubaneswar</Text>
             </View>
           </View>
           <View style={styles.payslipTitle}>
@@ -304,11 +304,11 @@ const ProfessionalPayslipPDF: React.FC<ProfessionalPayslipPDFProps> = ({ employe
           <View style={styles.column}>
             <Text style={styles.sectionTitle}>Company Details</Text>
             <View style={styles.employeeCard}>
-              <Text style={styles.employeeDetail}>JJ Construction</Text>
+              <Text style={styles.employeeDetail}>Promod Construction and Engineering</Text>
               <Text style={styles.employeeDetail}>Construction Site Office</Text>
-              <Text style={styles.employeeDetail}>Main Road, City, State</Text>
-              <Text style={styles.employeeDetail}>Phone: +91 XXXXX XXXXX</Text>
-              <Text style={styles.employeeDetail}>Email: jaganbehera63@gmail.com</Text>
+              <Text style={styles.employeeDetail}>Near Patia college, Patia, Bhubaneswar</Text>
+              <Text style={styles.employeeDetail}>Phone: +91 9861157297</Text>
+              <Text style={styles.employeeDetail}>Email: pramodpradhan@gmail.com</Text>
             </View>
           </View>
         </View>
@@ -457,7 +457,7 @@ const ProfessionalPayslipPDF: React.FC<ProfessionalPayslipPDFProps> = ({ employe
             This is a computer-generated payslip and does not require a signature.
           </Text>
           <Text style={styles.footerText}>
-            For any queries, please contact +91 XXXXX XXXXX or jaganbehera63@gmail.com
+            For any queries, please contact +91 9861157297,8328862052 or pramodpradhan@gmail.com
           </Text>
         </View>
       </Page>

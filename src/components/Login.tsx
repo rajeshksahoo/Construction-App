@@ -93,13 +93,13 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         onLogin(userData.role, userData);
       } else {
         // If user doesn't exist in Firestore, check if it's the main admin
-        if (credentials.email === 'jagan@gmail.com') {
+        if (credentials.email === 'rajesh@gmail.com') {
           // Create admin user in Firestore
           await setDoc(doc(db, 'users', user.uid), {
             email: credentials.email,
             role: 'admin',
             createdAt: new Date(),
-            name: 'Jagan Admin'
+            name: 'Rajesh Admin'
           });
           onLogin('admin', { email: credentials.email, role: 'admin' });
         } else {
@@ -213,17 +213,17 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       // Check if admin user already exists
       const adminQuery = query(
         collection(db, 'users'), 
-        where('email', '==', 'jagan@gmail.com')
+        where('email', '==', 'rajesh@gmail.com')
       );
       const querySnapshot = await getDocs(adminQuery);
       
       if (querySnapshot.empty) {
         // Create admin user in Firestore (the actual auth user will be created when they first login)
         await setDoc(doc(db, 'users', 'admin-user'), {
-          email: 'jagan@gmail.com',
+          email: 'rajesh@gmail.com',
           role: 'admin',
           createdAt: new Date(),
-          name: 'Jagan Admin',
+          name: 'Rajesh Admin',
           permissions: {
             canView: true,
             canEdit: true,
@@ -287,7 +287,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               <Building2 className="text-white w-10 h-10" />
             </div>
             <h1 className="text-4xl font-bold text-white mb-2">Welcome Back</h1>
-            <p className="text-white text-opacity-80 text-lg">Sign in to JJ Construction</p>
+            <p className="text-white text-opacity-80 text-lg">Sign in to Promod Construction and Engineering</p>
           </div>
 
           {/* Login Form */}
@@ -372,7 +372,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           {/* Footer */}
           <div className="mt-8 text-center pt-5 border-t border-white border-opacity-10">
             <p className="text-white text-opacity-60 text-sm">
-              © 2025 JJ Construction. Secure Workforce Management
+              © 2025 Promod Construction and Engineering. Secure Workforce Management
             </p>
           </div>
         </div>

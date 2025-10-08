@@ -15,7 +15,7 @@ const Footer: React.FC = () => {
               <div className="bg-gradient-to-r from-blue-500 to-purple-500 p-2 rounded-lg">
                 <Code className="h-6 w-6 text-white" />
               </div>
-              <h3 className="text-lg font-bold">JJ Construction</h3>
+              <h3 className="text-lg font-bold">Promod Construction and Engineering</h3>
             </div>
             <p className="text-gray-300 text-sm leading-relaxed">
               Professional workforce management system designed to streamline 
@@ -29,7 +29,7 @@ const Footer: React.FC = () => {
             <h4 className="text-lg font-semibold">Get In Touch</h4>
             <div className="space-y-3">
               <a 
-                href="mailto:jaganbehera63@gmail.com"
+                href="mailto:pramodpradhan@gmail.com"
                 className="flex items-center space-x-3 text-gray-300 hover:text-white transition-colors duration-200 group"
               >
                 <div className="bg-gray-700 p-2 rounded-lg group-hover:bg-blue-600 transition-colors duration-200">
@@ -37,7 +37,7 @@ const Footer: React.FC = () => {
                 </div>
                 <div>
                   <p className="text-sm font-medium">Email Support</p>
-                  <p className="text-xs text-gray-400">jaganbehera63@gmail.com</p>
+                  <p className="text-xs text-gray-400">pramodpradhan@gmail.com</p>
                 </div>
               </a>
             </div>
@@ -68,7 +68,7 @@ const Footer: React.FC = () => {
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
             {/* Copyright */}
             <div className="flex items-center space-x-2 text-gray-400 text-sm">
-              <span>© {currentYear} JJ Construction. All rights reserved.</span>
+              <span>© {currentYear} Promod Construction and Engineering. All rights reserved.</span>
             </div>
 
             {/* Crafted by section */}
@@ -84,7 +84,7 @@ const Footer: React.FC = () => {
             {/* Contact Link */}
             <div className="flex items-center space-x-2">
               <a 
-                href="mailto:jaganbehera63@gmail.com"
+                href="mailto:pramodpradhan@gmail.com"
                 className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200 text-sm font-medium"
               >
                 <Mail className="h-4 w-4" />
@@ -98,21 +98,21 @@ const Footer: React.FC = () => {
         <div className="border-t border-gray-700 pt-6 mt-6 md:hidden">
           <div className="text-center space-y-4">
             <div className="text-gray-400 text-sm">
-              © {currentYear} JJ Construction. All rights reserved.
+              © {currentYear} Promod Construction and Engineering. All rights reserved.
             </div>
             
             <div className="flex items-center justify-center space-x-2 text-gray-300 text-sm">
               <span>Crafted with</span>
               <Heart className="h-4 w-4 text-red-500 fill-current animate-pulse" />
-              <span>by Jagan Behera</span>
+              <span>by Rajesh</span>
             </div>
 
             <div>
               <a 
-                href="mailto:jaganbehera63@gmail.com"
+                href="mailto:pramodpradhan@gmail.com"
                 className="inline-flex items-center space-x-2 text-blue-400 hover:text-blue-300 text-sm transition-colors duration-200"
               >
-                <span>Have questions? Reach me at jaganbehera63@gmail.com</span>
+                <span>Have questions? Reach me at pramodpradhan@gmail.com</span>
               </a>
             </div>
           </div>
