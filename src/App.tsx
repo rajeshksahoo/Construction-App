@@ -260,7 +260,7 @@ function App() {
         
         <div className="border-t border-gray-700 mt-6 pt-6 text-center">
           <p className="text-gray-400 text-sm">
-            © {new Date().getFullYear()} Rajesh Kuamr Sahoo All rights reserved. | 
+            Copyright © {new Date().getFullYear()} Rajesh Kuamr Sahoo All rights reserved. | 
             Made with ❤️ in India
           </p>
         </div>

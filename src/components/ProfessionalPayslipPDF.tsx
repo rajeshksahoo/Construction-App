@@ -1,7 +1,7 @@
 import React from 'react';
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
 import { Employee } from '../types';
-import { formatCurrency } from '../utils/dateUtils';
+// using local PDF-safe formatter (formatForPdf) to avoid glyph issues in PDF renderer
 
 // Define extended report interface
 interface ExtendedMonthlyReport {
@@ -146,8 +146,8 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 6,
+    alignItems: 'flex-start',
+    paddingVertical: 8,
     borderBottom: '0.5pt solid #f1f5f9',
   },
   rowTotal: {
@@ -163,16 +163,17 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 10,
     color: '#475569',
-    flex: 2,
+    width: '65%',
   },
   subLabel: {
     fontSize: 8,
     color: '#64748b',
+    marginTop: 2,
   },
   amount: {
     fontSize: 10,
     fontWeight: 'bold',
-    flex: 1,
+    width: '35%',
     textAlign: 'right',
   },
   positive: {
@@ -230,9 +231,9 @@ const ProfessionalPayslipPDF: React.FC<ProfessionalPayslipPDFProps> = ({ employe
   };
 
   const formatBalance = (balance: number) => {
-    if (balance === 0) return formatCurrency(0);
-    if (balance > 0) return `+${formatCurrency(balance)}`;
-    return `-${formatCurrency(Math.abs(balance))}`;
+    if (balance === 0) return formatForPdf(0);
+    if (balance > 0) return `+${formatForPdf(balance)}`;
+    return `-${formatForPdf(Math.abs(balance))}`;
   };
 
   const getFinalAmountColor = () => {
@@ -247,25 +248,21 @@ const ProfessionalPayslipPDF: React.FC<ProfessionalPayslipPDFProps> = ({ employe
     return 'Overpaid - Adjust in next month';
   };
 
-  const getStatCardStyle = (index: number) => {
-    const colors = [
-      { bg: '#dbeafe', text: '#1e40af', border: '#93c5fd' }, // blue
-      { bg: '#dcfce7', text: '#166534', border: '#86efac' }, // green
-      { bg: '#fef3c7', text: '#92400e', border: '#fcd34d' }, // amber
-      { bg: '#fce7f3', text: '#be185d', border: '#f9a8d4' }, // pink
-    ];
-    return {
-      backgroundColor: colors[index].bg,
-      border: `1pt solid ${colors[index].border}`,
-    };
-  };
-
   const statCardStyles = [
     { backgroundColor: '#dbeafe', color: '#1e40af' },
     { backgroundColor: '#dcfce7', color: '#166534' },
     { backgroundColor: '#fef3c7', color: '#92400e' },
     { backgroundColor: '#fce7f3', color: '#be185d' },
   ];
+
+  // PDF-safe currency formatting: Intl currency sometimes uses glyphs not available
+  // in the PDF renderer; use explicit rupee symbol with toLocaleString to avoid
+  // replacement glyphs (like superscript '¹').
+  const formatForPdf = (amount: number) => {
+    // Use ASCII 'Rs' to avoid rupee glyph substitution in PDF fonts which
+    // sometimes maps the glyph to a superscript '¹'.
+    return `Rs ${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
 
   return (
     <Document>
@@ -298,7 +295,7 @@ const ProfessionalPayslipPDF: React.FC<ProfessionalPayslipPDFProps> = ({ employe
               <Text style={styles.employeeName}>{employee.name}</Text>
               <Text style={styles.employeeDetail}>Designation: {employee.designation}</Text>
               <Text style={styles.employeeDetail}>Contact: {employee.contactNumber}</Text>
-              <Text style={styles.employeeDetail}>Daily Wage: {formatCurrency(employee.dailyWage)}</Text>
+              <Text style={styles.employeeDetail}>Daily Wage: {formatForPdf(employee.dailyWage)}</Text>
             </View>
           </View>
           <View style={styles.column}>
@@ -317,8 +314,8 @@ const ProfessionalPayslipPDF: React.FC<ProfessionalPayslipPDFProps> = ({ employe
         <View style={styles.statsGrid}>
           {[
             { label: 'Days Worked', value: report.totalDaysWorked.toString(), index: 0 },
-            { label: 'Total Earnings', value: formatCurrency(report.totalWagesEarned), index: 1 },
-            { label: 'Advances', value: formatCurrency(report.totalAdvancesTaken), index: 2 },
+            { label: 'Total Earnings', value: formatForPdf(report.totalWagesEarned), index: 1 },
+            { label: 'Advances', value: formatForPdf(report.totalAdvancesTaken), index: 2 },
             { label: 'Net Amount', value: formatBalance(report.finalAmount), index: 3 },
           ].map((stat, i) => (
             <View key={i} style={[styles.statCard, { backgroundColor: statCardStyles[stat.index].backgroundColor }]}>
@@ -341,11 +338,11 @@ const ProfessionalPayslipPDF: React.FC<ProfessionalPayslipPDFProps> = ({ employe
               <View>
                 <Text style={styles.label}>Basic Wages</Text>
                 <Text style={styles.subLabel}>
-                  {report.totalDaysWorked} days × {formatCurrency(employee.dailyWage)}
+                  {report.totalDaysWorked} days × {formatForPdf(employee.dailyWage)}
                 </Text>
               </View>
-              <Text style={[styles.amount, styles.positive]}>
-                +{formatCurrency(report.baseWages)}
+                <Text style={[styles.amount, styles.positive]}>
+                +{formatForPdf(report.baseWages)}
               </Text>
             </View>
 
@@ -361,7 +358,7 @@ const ProfessionalPayslipPDF: React.FC<ProfessionalPayslipPDFProps> = ({ employe
                       </Text>
                     </View>
                     <Text style={[styles.amount, styles.positive]}>
-                      +{formatCurrency(report.otRecords.reduce((sum, record) => sum + (record.customAmount || 0), 0))}
+                      +{formatForPdf(report.otRecords.reduce((sum, record) => sum + (record.customAmount || 0), 0))}
                     </Text>
                   </View>
                 )}
@@ -375,7 +372,7 @@ const ProfessionalPayslipPDF: React.FC<ProfessionalPayslipPDFProps> = ({ employe
                       </Text>
                     </View>
                     <Text style={[styles.amount, styles.positive]}>
-                      +{formatCurrency(report.halfDayRecords.reduce((sum, record) => sum + (record.customAmount || 0), 0))}
+                      +{formatForPdf(report.halfDayRecords.reduce((sum, record) => sum + (record.customAmount || 0), 0))}
                     </Text>
                   </View>
                 )}
@@ -389,15 +386,15 @@ const ProfessionalPayslipPDF: React.FC<ProfessionalPayslipPDFProps> = ({ employe
                       </Text>
                     </View>
                     <Text style={[styles.amount, styles.positive]}>
-                      +{formatCurrency(report.customPaymentRecords.reduce((sum, record) => sum + (record.customAmount || 0), 0))}
+                      +{formatForPdf(report.customPaymentRecords.reduce((sum, record) => sum + (record.customAmount || 0), 0))}
                     </Text>
                   </View>
                 )}
 
                 <View style={styles.row}>
                   <Text style={[styles.label, { fontWeight: 'bold' }]}>Additional Earnings Total</Text>
-                  <Text style={[styles.amount, styles.positive, { fontWeight: 'bold' }]}>
-                    +{formatCurrency(report.additionalEarnings)}
+                  <Text style={[styles.amount, styles.positive, { fontWeight: 'bold' }]}> 
+                    +{formatForPdf(report.additionalEarnings)}
                   </Text>
                 </View>
               </>
@@ -407,7 +404,7 @@ const ProfessionalPayslipPDF: React.FC<ProfessionalPayslipPDFProps> = ({ employe
             <View style={styles.rowTotal}>
               <Text style={[styles.label, { fontWeight: 'bold', fontSize: 12 }]}>TOTAL EARNINGS</Text>
               <Text style={[styles.amount, styles.positive, { fontSize: 12, fontWeight: 'bold' }]}>
-                +{formatCurrency(report.totalWagesEarned)}
+                +{formatForPdf(report.totalWagesEarned)}
               </Text>
             </View>
           </View>
@@ -420,19 +417,19 @@ const ProfessionalPayslipPDF: React.FC<ProfessionalPayslipPDFProps> = ({ employe
             <View style={styles.row}>
               <Text style={styles.label}>Advances Taken</Text>
               <Text style={[styles.amount, styles.negative]}>
-                -{formatCurrency(report.totalAdvancesTaken)}
+                -{formatForPdf(report.totalAdvancesTaken)}
               </Text>
             </View>
             <View style={styles.row}>
               <Text style={styles.label}>Salary Already Paid</Text>
               <Text style={[styles.amount, styles.negative]}>
-                -{formatCurrency(report.totalSalaryPaid)}
+                -{formatForPdf(report.totalSalaryPaid)}
               </Text>
             </View>
             <View style={styles.rowTotal}>
               <Text style={[styles.label, { fontWeight: 'bold', fontSize: 12 }]}>TOTAL DEDUCTIONS</Text>
               <Text style={[styles.amount, styles.negative, { fontSize: 12, fontWeight: 'bold' }]}>
-                -{formatCurrency(report.totalAdvancesTaken + report.totalSalaryPaid)}
+                -{formatForPdf(report.totalAdvancesTaken + report.totalSalaryPaid)}
               </Text>
             </View>
           </View>
