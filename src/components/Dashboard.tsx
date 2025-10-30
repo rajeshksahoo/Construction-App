@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
-import { Employee, AttendanceRecord, Advance } from '../types';
+import { Employee, AttendanceRecord, Advance, FuelRecord } from '../types';
 import { formatCurrency, getCurrentWeek, getWeekStart } from '../utils/dateUtils';
-import { Users, Calendar, IndianRupee, TrendingUp, X } from 'lucide-react';
+import { Users, Calendar, IndianRupee, TrendingUp, Truck, X } from 'lucide-react';
 
 interface DashboardProps {
   employees: Employee[];
   attendance: AttendanceRecord[];
   advances: Advance[];
+  fuelRecords: FuelRecord[];
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ employees, attendance, advances }) => {
+const Dashboard: React.FC<DashboardProps> = ({ employees, attendance, advances, fuelRecords }) => {
   const [showAllEmployees, setShowAllEmployees] = useState(false);
   const currentWeek = getCurrentWeek();
   
@@ -114,6 +115,22 @@ const Dashboard: React.FC<DashboardProps> = ({ employees, attendance, advances }
       color: 'bg-orange-500',
       clickable: false
     },
+    {
+      title: 'Month Fuel',
+      value: formatCurrency(
+        fuelRecords
+          .filter(r => {
+            const recordDate = new Date(r.date);
+            const now = new Date();
+            return recordDate.getMonth() === now.getMonth() && 
+                   recordDate.getFullYear() === now.getFullYear();
+          })
+          .reduce((sum, r) => sum + (r.fuelCost || 0), 0)
+      ),
+      icon: Truck,
+      color: 'bg-yellow-500',
+      clickable: false
+    }
   ];
 
   return (

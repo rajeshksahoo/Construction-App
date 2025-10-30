@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Employee, AttendanceRecord, Advance, SalaryPayment } from '../types';
-import { formatCurrency, getCurrentWeek } from '../utils/dateUtils';
+import { formatCurrency, getCurrentWeek, getWeekStart } from '../utils/dateUtils';
 import { CreditCard, User, Calendar, IndianRupee, TrendingUp, TrendingDown, Search, CheckCircle, AlertCircle, Database } from 'lucide-react';
 import { useFirestore } from '../hooks/useFirestore';
  
@@ -22,6 +22,7 @@ const PaymentManager: React.FC<PaymentManagerProps> = ({
   const [paymentAmount, setPaymentAmount] = useState<string>('');
   const [showPaymentForm, setShowPaymentForm] = useState<boolean>(false);
   const [paymentDescription, setPaymentDescription] = useState<string>('Salary Payment');
+  const [includeAllHistory, setIncludeAllHistory] = useState<boolean>(false);
  
   // Use Firestore for salary payments
   const { data: salaryPayments, addItem: addSalaryPayment, loading: salaryPaymentsLoading } = useFirestore<SalaryPayment>('salaryPayments');
@@ -29,7 +30,7 @@ const PaymentManager: React.FC<PaymentManagerProps> = ({
   const calculateEmployeePayment = (employeeId: string) => {
     const currentWeek = getCurrentWeek();
     const employee = employees.find(e => e.id === employeeId);
-   
+ 
     if (!employee) return null;
  
     // Get all attendance records for the current week
@@ -60,21 +61,34 @@ const PaymentManager: React.FC<PaymentManagerProps> = ({
  
     totalWages = baseWages + additionalEarnings;
    
-    // 🚨 CRITICAL FIX: Calculate ALL advances (not just current week)
-    const allAdvances = advances
+    // By default we scope advances / payments to the current week to avoid
+    // surprising global balance shifts when older payments/advances exist.
+    // Admin can toggle `includeAllHistory` to view global balances.
+    const weekAdvancesTotal = advances
+      .filter(a => a.employeeId === employeeId && getWeekStart(new Date(a.date)) === currentWeek)
+      .reduce((sum, a) => sum + a.amount, 0);
+ 
+    const weekSalaryPaymentsTotal = salaryPayments
+      .filter(p => p.employeeId === employeeId && getWeekStart(new Date(p.paymentDate)) === currentWeek)
+      .reduce((sum, p) => sum + p.amount, 0);
+ 
+    // If includeAllHistory is true, aggregate across entire history instead.
+    const allAdvancesTotal = advances
       .filter(a => a.employeeId === employeeId)
       .reduce((sum, a) => sum + a.amount, 0);
-   
-    // 🚨 CRITICAL FIX: Calculate ALL salary payments (not just current week)
-    const allSalaryPayments = salaryPayments
+ 
+    const allSalaryPaymentsTotal = salaryPayments
       .filter(p => p.employeeId === employeeId)
       .reduce((sum, p) => sum + p.amount, 0);
  
-    // CORRECTED: Final payment = Total wages - ALL Advances
-    const finalPayment = totalWages - allAdvances;
+    const advancesTotal = includeAllHistory ? allAdvancesTotal : weekAdvancesTotal;
+    const salaryPaymentsTotal = includeAllHistory ? allSalaryPaymentsTotal : weekSalaryPaymentsTotal;
  
-    // 🚨 CRITICAL FIX: Remaining balance = Final payment - ALL Salary payments
-    const remainingBalance = finalPayment - allSalaryPayments;
+    // Final payment = Total wages - advances (in selected scope)
+    const finalPayment = totalWages - advancesTotal;
+ 
+    // Remaining balance = Final payment - salary payments (in selected scope)
+    const remainingBalance = finalPayment - salaryPaymentsTotal;
    
     // Get OT and custom details (for current week only)
     const otRecords = weekRecords.filter(record => record.customType === 'ot');
@@ -87,12 +101,12 @@ const PaymentManager: React.FC<PaymentManagerProps> = ({
       baseWages,
       additionalEarnings,
       totalWages,
-      weekAdvances: allAdvances, // Now shows all advances
+      weekAdvances: weekAdvancesTotal,
       finalPayment,
-      weekSalaryPayments: allSalaryPayments, // Now shows all salary payments
+      weekSalaryPayments: weekSalaryPaymentsTotal,
       remainingBalance,
-      advances: advances.filter(a => a.employeeId === employeeId), // All advances
-      salaryPayments: salaryPayments.filter(p => p.employeeId === employeeId), // All salary payments
+      advances: advances.filter(a => a.employeeId === employeeId), // all advance entries (for list)
+      salaryPayments: salaryPayments.filter(p => p.employeeId === employeeId), // all payments (for history)
       otRecords,
       halfDayRecords,
       customPaymentRecords,
@@ -118,6 +132,7 @@ const PaymentManager: React.FC<PaymentManagerProps> = ({
       amount: parseFloat(paymentAmount),
       paymentDate: new Date().toISOString().split('T')[0],
       description: paymentDescription,
+      weekStart: getCurrentWeek(), // Keep this for reporting, but don't use for filtering
     };
  
     try {
@@ -162,18 +177,12 @@ const PaymentManager: React.FC<PaymentManagerProps> = ({
   const selectedEmployeeData = selectedEmployee ? calculateEmployeePayment(selectedEmployee) : null;
  
   return (
-    <div className="space-y-6 relative">
-      {/* Decorative particles (positioned absolute) */}
-      <div className="pointer-events-none hidden lg:block">
-        <div className="particle animation-delay-1000" style={{ left: '8%', top: '4%' }} />
-        <div className="particle animation-delay-2000" style={{ left: '20%', top: '8%' }} />
-        <div className="particle animation-delay-3000" style={{ left: '85%', top: '6%' }} />
-      </div>
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <div className="p-3 rounded-lg gradient-bg-animated text-white shadow-lg transform-gpu hover:scale-105 transition-transform duration-500">
-            <CreditCard className="w-6 h-6" />
+          <div className="p-2 bg-green-100 rounded-lg">
+            <CreditCard className="w-6 h-6 text-green-600" />
           </div>
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Payment Management</h2>
@@ -182,25 +191,34 @@ const PaymentManager: React.FC<PaymentManagerProps> = ({
         </div>
         <div className="flex items-center gap-3">
           {/* Database Status Indicator */}
-          <div className="flex items-center gap-2 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium shadow-sm pulse">
+          <div className="flex items-center gap-2 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
             <Database className="h-4 w-4" />
             Database Connected
           </div>
          
-          {userRole === 'viewer' && (
-            <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
-              View Only
-            </span>
-          )}
+          <div className="flex items-center gap-3">
+            <label className="flex items-center text-sm text-gray-600 gap-2">
+              <input
+                type="checkbox"
+                checked={includeAllHistory}
+                onChange={(e) => setIncludeAllHistory(e.target.checked)}
+                className="accent-indigo-600"
+              />
+              Include all history in balance
+            </label>
+ 
+            {userRole === 'viewer' && (
+              <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                View Only
+              </span>
+            )}
+          </div>
         </div>
       </div>
  
       {/* Employee Selection */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-3">
-          Select Employee for Payment
-          <span className="text-xs px-2 py-1 rounded-full bg-blue-50 text-blue-700 font-medium">Live</span>
-        </h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Employee for Payment</h3>
        
         {/* Search Box */}
         <div className="mb-6">
@@ -211,7 +229,7 @@ const PaymentManager: React.FC<PaymentManagerProps> = ({
               placeholder="Search employee by name or designation..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent input-glass"
+              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
         </div>
@@ -224,16 +242,15 @@ const PaymentManager: React.FC<PaymentManagerProps> = ({
             const isSelected = selectedEmployee === employee.id;
             const balanceInfo = getBalanceDisplayInfo(paymentData.remainingBalance);
  
-              return (
+            return (
               <button
                 key={employee.id}
                 onClick={() => setSelectedEmployee(employee.id)}
-                className={`p-4 rounded-lg border-2 transition-all duration-300 text-left transform-gpu hover:-translate-y-1 hover:scale-[1.02] ${
+                className={`p-4 rounded-lg border-2 transition-all duration-200 text-left ${
                   isSelected
-                    ? 'border-blue-500 bg-blue-50 shadow-lg'
-                    : `border-gray-200 hover:border-gray-300 bg-white hover:bg-gray-50 ${balanceInfo.borderColor} ${balanceInfo.bgColor} shadow-sm`
+                    ? 'border-blue-500 bg-blue-50'
+                    : `border-gray-200 hover:border-gray-300 bg-white hover:bg-gray-50 ${balanceInfo.borderColor} ${balanceInfo.bgColor}`
                 }`}
-                style={{ willChange: 'transform' }}
               >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
@@ -246,7 +263,7 @@ const PaymentManager: React.FC<PaymentManagerProps> = ({
                 </div>
                 <p className="text-sm text-gray-600">{employee.designation}</p>
                 <div className="mt-2 text-xs text-gray-500">
-                  {paymentData.daysWorked} days • {paymentData.additionalEarnings > 0 ? formatCurrency(paymentData.additionalEarnings) + ' extra' : 'no extras'}
+                  {paymentData.daysWorked} days + {paymentData.additionalEarnings > 0 ? formatCurrency(paymentData.additionalEarnings) + ' extra' : 'no extras'}
                 </div>
                 {paymentData.weekSalaryPayments > 0 && (
                   <div className="mt-1 text-xs text-green-600">
@@ -292,10 +309,10 @@ const PaymentManager: React.FC<PaymentManagerProps> = ({
               </div>
              
               {/* Record Payment Button - Now it will always show for admin */}
-                {userRole === 'admin' && (
+              {userRole === 'admin' && (
                 <button
                   onClick={() => setShowPaymentForm(true)}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 btn-glow"
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
                   disabled={salaryPaymentsLoading}
                 >
                   <CreditCard className="h-4 w-4" />
@@ -338,6 +355,18 @@ const PaymentManager: React.FC<PaymentManagerProps> = ({
             <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <h4 className="font-semibold text-blue-900 mb-3">Record Salary Payment</h4>
               <form onSubmit={handleSalaryPayment} className="space-y-3">
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      disabled
+                      checked={false}
+                      className="accent-indigo-600"
+                    />
+                    Payments do not auto-settle advances. To apply payments to advances, review history manually.
+                  </label>
+                </div>
+ 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div>
                     <label className="block text-sm font-medium text-blue-700 mb-1">
@@ -446,7 +475,7 @@ const PaymentManager: React.FC<PaymentManagerProps> = ({
              
               <div className="flex justify-between items-center pt-2 border-t border-gray-200 font-bold">
                 <span className="text-gray-900">Total Earnings</span>
-                <span className="text-green-600 font-extrabold animate-[pulse_2s_ease-in-out_infinite]">+{formatCurrency(selectedEmployeeData.totalWages)}</span>
+                <span className="text-green-600">+{formatCurrency(selectedEmployeeData.totalWages)}</span>
               </div>
  
               {/* Deductions */}
@@ -483,7 +512,7 @@ const PaymentManager: React.FC<PaymentManagerProps> = ({
           </div>
  
           {/* Payment Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
             <div className="bg-blue-50 rounded-lg p-4">
               <div className="flex items-center justify-between">
                 <div>

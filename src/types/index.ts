@@ -7,7 +7,7 @@ export interface Employee {
   createdAt: string;
   photo?: string; // base64 encoded image
 }
-
+ 
 export interface AttendanceRecord {
   id?: string;
   employeeId: string;
@@ -16,7 +16,7 @@ export interface AttendanceRecord {
   late?: boolean;
   weekStart: string; // Monday of the week
 }
-
+ 
 export interface Advance {
   id: string;
   employeeId: string;
@@ -24,25 +24,25 @@ export interface Advance {
   date: string;
   description: string;
 }
-
+ 
 export interface WeeklySummary {
   weekStart: string;
   daysWorked: number;
   totalWages: number;
 }
-
+ 
 export interface User {
   id: string;
   username: string;
   password: string;
   role: 'admin' | 'viewer';
 }
-
+ 
 export interface AttendanceStatus {
   present: boolean;
   late?: boolean;
 }
-
+ 
 export interface Vehicle {
   id: string;
   vehicleNumber: string;
@@ -50,7 +50,7 @@ export interface Vehicle {
   vehicleType: string;
   createdAt: string;
 }
-
+ 
 export interface FuelRecord {
   id: string;
   vehicleId: string;
@@ -68,8 +68,9 @@ export interface SalaryPayment {
   amount: number;
   description: string;
   createdAt: string;
+  weekStart?: string; // Optional weekStart for reporting (e.g. Monday of the week)
 }
-
+ 
 export interface MonthlyReport {
   employeeId: string;
   month: string;

@@ -276,6 +276,7 @@ function App() {
             employees={employees} 
             attendance={attendance} 
             advances={advances} 
+            fuelRecords={fuelRecords}
           />
         );
       case 'employees':
